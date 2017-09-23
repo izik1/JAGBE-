@@ -116,16 +116,19 @@ void cpu::f_runIstr() {
     case 0xC0:
         switch (op) {
         case 0xC4: f_call(!f_condJump(true)); break;
+        case 0xC5: f_push(m_memory.b, m_memory.c); break;
         case 0xCB: f_runCbInstr(); break;
         case 0xCC: f_call(f_condJump(true)); break;
         case 0xCD: f_call(true); break;
         case 0xD4: f_call(!f_condJump(false)); break;
+        case 0xD5: f_push(m_memory.d, m_memory.e); break;
         case 0xDC: f_call(f_condJump(false)); break;
         case 0xE0: f_writecycle(0xFF00 | f_readcycleU8(), m_memory.a); break;
         case 0xE2: f_writecycle(0xFF00 | m_memory.c, m_memory.a); break;
+        case 0xE5: f_push(m_memory.h, m_memory.l); break;
         case 0xF0: m_memory.a = f_readcycle(0xFF00 | f_readcycleU8()); break;
         case 0xF2: m_memory.a = f_readcycle(0xFF00 | m_memory.c); break;
-
+        case 0xF5: f_push(m_memory.a, m_memory.f); break;
         default: throw unimplementedInstructionException(op);
         }
 
@@ -146,6 +149,12 @@ void cpu::f_runCbInstr() {
     case 0x80: f_cbWrite(r, v & (~(1 << bit))); break; // RES b,r8
     case 0xC0: f_cbWrite(r, v | (1 << bit)); break; // SET b,r8
     }
+}
+
+inline void cpu::f_push(const uint8_t rHigh, const  uint8_t rLow) {
+    f_updateDevices(MCYCLE);
+    f_writecyclePush(rLow);
+    f_writecyclePush(rHigh);
 }
 
 inline void cpu::f_cbWrite(const uint8_t src, const uint8_t val) {
