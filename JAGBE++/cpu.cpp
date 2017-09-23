@@ -104,7 +104,8 @@ void cpu::f_runIstr() {
         case 0x28: f_jr8(f_condJump(true));   break;
         case 0x2F: // CPL
             m_memory.a = ~m_memory.a;
-            m_memory.f = (m_memory.f & (flags::getFlags(true, false, false, true)) | flags::getFlags(false, true, true, false));
+            m_memory.f = (m_memory.f & (flags::getFlags(true, false, false, true)) |
+                flags::getFlags(false, true, true, false));
             break;
         case 0x30: f_jr8(!f_condJump(false)); break;
         case 0x38: f_jr8(f_condJump(false));  break;
@@ -124,6 +125,7 @@ void cpu::f_runIstr() {
             m_memory.f = flags::f_getZF8(sum) | flags::f_getHC8(m_memory.a, val) | flags::f_getCF8(m_memory.a, sum);
             break;
         }
+        case 0x03: f_sbc(val); break;
         case 0x05: { // XOR,A,R
             m_memory.a = val ^ m_memory.a;
             m_memory.f = flags::f_getZF8(m_memory.a);
@@ -149,6 +151,7 @@ void cpu::f_runIstr() {
         case 0xD5: f_push(m_memory.d, m_memory.e); break;
         case 0xD9: f_ret(true); break;
         case 0xDC: f_call(f_condJump(false)); break;
+        case 0xDE: f_sbc(f_readcycleU8());
         case 0xE0: f_writecycle(0xFF00 | f_readcycleU8(), m_memory.a); break;
         case 0xE1: f_pop(m_memory.h, m_memory.l); break;
         case 0xE2: f_writecycle(0xFF00 | m_memory.c, m_memory.a); break;
@@ -314,6 +317,16 @@ inline void cpu::f_cmp(const uint8_t val) {
         flags::f_getHC8(m_memory.a, val) | (m_memory.a - val < 0 ? flags::CARRYBIT : 0);
 }
 
+inline void cpu::f_sbc(const uint8_t val)
+{   // FIXME: Brace on new line because of wierd visual studio things.
+    // Copied from https://github.com/eightlittlebits/elbgb/blob/dffc2800/elbgb_core/CPU/LR35902.cs#L1084
+    uint8_t cIn = (m_memory.f & flags::CARRYBIT) ? 1 : 0;
+    int16_t res = m_memory.a - val - cIn;
+    m_memory.f = flags::f_getZF8(res) | flags::NEGATIVEVEBIT |
+        ((m_memory.a & 0xF) - (val & 0xF) - cIn < 0 ? flags::HALFBIT : 0) | (res < 0 ? flags::CARRYBIT : 0);
+    m_memory.a = res;
+}
+
 inline void cpu::f_ldRR(const uint8_t dest, const uint8_t src) {
     if (dest == 0b110 || src == 0b110) {
         assert(src != dest);
@@ -355,9 +368,7 @@ void cpu::f_writecycle(const uint16_t address, const uint8_t value) {
 inline uint8_t cpu::f_readcycleHL() { return f_readcycle(m_memory.hl()); }
 inline uint8_t cpu::f_readcycleU8() { return f_readcycle(m_memory.pc++); }
 
-inline void cpu::f_writecycleHL(const uint8_t value) {
-    f_writecycle(m_memory.hl(), value);
-}
+inline void cpu::f_writecycleHL(const uint8_t value) { f_writecycle(m_memory.hl(), value); }
 
 inline void cpu::f_writecyclePush(const uint8_t value) { f_writecycle(--m_memory.sp, value); }
 
