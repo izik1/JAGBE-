@@ -143,7 +143,46 @@ void cpu::f_runCbInstr() {
     uint8_t bit = (op >> 3) & 0b111;
     switch (op & 0xC0) {
     case 0x00:
-        throw NotImplementedException();
+        uint8_t res;
+        switch (bit)
+        {
+        case 0b000: // RLC
+            res = (v << 1) | (v >> 7);
+            m_memory.f = ((v & 0x80) >> (7 - flags::CARRYFLAG)) | (res == 0 ? flags::ZEROBIT : 0);
+            break;
+        case 0b001: // RRC
+            res = ((v >> 1) | (v << 7));
+            m_memory.f = (((v & 1) << flags::CARRYFLAG) | (res == 0 ? flags::ZEROBIT : 0));
+            break;
+        case 0b010: // RL
+            res = ((v << 1) | ((m_memory.f & flags::CARRYBIT) >> flags::CARRYFLAG));
+            m_memory.f = (((v & 0x80) >> (7 - flags::CARRYFLAG)) | (res == 0 ? flags::ZEROFLAG : 0));
+            break;
+        case 0b011: // RR
+            res = ((v >> 1) | ((m_memory.f & flags::CARRYBIT) ? 0x80 : 0));
+            m_memory.f = (((v & 1) << flags::CARRYFLAG) | (res == 0 ? flags::ZEROBIT : 0));
+            break;
+        case 0b100: // SLA
+            res = (v << 1);
+            m_memory.f = (((v & 0x80) >> (7 - flags::CARRYFLAG)) | (res == 0 ? flags::ZEROBIT : 0));
+            break;
+        case 0b101: // SRA
+            res = ((v >> 1) | (v & 0x80));
+            m_memory.f = (((v & 1) << flags::CARRYFLAG) | (res == 0 ? flags::ZEROBIT : 0));
+            break;
+        case 0b110: // SWAP
+            res = ((v << 4) | v >> 4);
+            m_memory.f = v == 0 ? flags::ZEROBIT : 0;
+            break;
+        case 0b111: // SRL
+            res = v >> 1;
+            m_memory.f = (((v & 1) << flags::CARRYFLAG) | (res == 0 ? flags::ZEROBIT : 0));
+            break;
+        }
+
+        f_cbWrite(r, res);
+        break;
+
     case 0x40: m_memory.f = flags::f_getZF8(v & (1 << bit)) |
         flags::HALFBIT | (m_memory.f & flags::CARRYBIT); break; // BIT b,r8;
     case 0x80: f_cbWrite(r, v & (~(1 << bit))); break; // RES b,r8
