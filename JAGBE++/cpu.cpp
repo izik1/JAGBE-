@@ -74,6 +74,9 @@ void cpu::f_runIstr() {
         case 0x02: case 0x12: case 0x22: case 0x32: // LD,(r16),a
             f_ldR16a(op >> 4); break;
 
+        case 0x03: case 0x13: case 0x23: case 0x33: // INC,r16
+            f_inc16(op >> 4); break;
+
         case 0x04: case 0x0C: case 0x14: case 0x1C: case 0x24: case 0x2C: case 0x34: case 0x3C:
             f_inc8(op >> 3); break;
 
@@ -85,6 +88,9 @@ void cpu::f_runIstr() {
 
         case 0x0A: case 0x1A: case 0x2A: case 0x3A: // LD,A,(r16)
             f_ldaR16(op >> 4); break;
+
+        case 0x0B: case 0x1B: case 0x2B: case 0x3B: // DEC,r16
+            f_dec16(op >> 4); break;
 
         case 0x17: { // RLA
             bool b = m_memory.a & 0x80;
@@ -223,20 +229,20 @@ inline void cpu::f_cbWrite(const uint8_t src, const uint8_t val) {
     else m_memory.setReg8(src, val);
 }
 
-inline void cpu::f_jr8(bool jump) {
+inline void cpu::f_jr8(const bool jump) {
     f_updateDevices(MCYCLE);
 
     if (!jump) m_memory.pc++;
     else m_memory.pc += int8_t(f_readcycleU8());
 }
 
-inline bool cpu::f_condJump(bool zero) {
+inline bool cpu::f_condJump(const bool zero) {
     return m_memory.f & (zero ? flags::ZEROBIT : flags::CARRYBIT);
 }
 
-inline void cpu::f_ldrD8(uint8_t rNum) { f_cbWrite(rNum, f_readcycleU8()); }
+inline void cpu::f_ldrD8(const uint8_t rNum) { f_cbWrite(rNum, f_readcycleU8()); }
 
-inline void cpu::f_inc8(uint8_t rNum) {
+inline void cpu::f_inc8(const uint8_t rNum) {
     uint8_t v = rNum == 0b110 ? f_readcycleHL() : m_memory.getReg8(rNum);
     f_cbWrite(rNum, v + 1);
     m_memory.f = flags::f_getZF8(v + 1) | flags::f_getHC8(v, 1) | (m_memory.f & flags::CARRYBIT);
@@ -246,6 +252,45 @@ inline void cpu::f_dec8(const uint8_t rNum) {
     uint8_t v = rNum == 0b110 ? f_readcycleHL() : m_memory.getReg8(rNum);
     f_cbWrite(rNum, v - 1);
     m_memory.f = flags::f_getZF8(v - 1) | flags::NEGATIVEVEBIT | flags::f_getHCN8(v, 1) | (m_memory.f & flags::CARRYBIT);
+}
+
+inline void cpu::f_inc16(const uint8_t r16Num) {
+    f_updateDevices(MCYCLE);
+    switch (r16Num) {
+    case 0:
+        if (m_memory.c == 0xFF) m_memory.b++;
+        m_memory.c++;
+        break;
+    case 1:
+        if (m_memory.e == 0xFF) m_memory.d++;
+        m_memory.e++;
+        break;
+    case 2:
+        if (m_memory.l == 0xFF) m_memory.h++;
+        m_memory.l++;
+        break;
+    default:
+        m_memory.sp++; return;
+    }
+}
+inline void cpu::f_dec16(const uint8_t r16Num) {
+    f_updateDevices(MCYCLE);
+    switch (r16Num) {
+    case 0:
+        if (m_memory.c == 0) m_memory.b--;
+        m_memory.c--;
+        break;
+    case 1:
+        if (m_memory.e == 0) m_memory.d--;
+        m_memory.e--;
+        break;
+    case 2:
+        if (m_memory.l == 0) m_memory.h--;
+        m_memory.l--;
+        break;
+    default:
+        m_memory.sp--; return;
+    }
 }
 
 inline void cpu::f_ldRR(const uint8_t dest, const uint8_t src) {

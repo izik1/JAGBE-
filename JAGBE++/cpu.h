@@ -23,11 +23,13 @@ private:
     inline void f_push(const uint8_t rHigh, const uint8_t rLow);
     inline void f_pop(uint8_t & rHigh, uint8_t & rLow);
     inline void f_cbWrite(const uint8_t src, const uint8_t val);
-    inline void f_jr8(bool jump);
-    inline bool f_condJump(bool zero);
-    inline void f_ldrD8(uint8_t rNum);
-    inline void f_inc8(uint8_t rNum);
+    inline void f_jr8(const bool jump);
+    inline bool f_condJump(const bool zero);
+    inline void f_ldrD8(const uint8_t rNum);
+    inline void f_inc8(const uint8_t rNum);
     inline void f_dec8(const uint8_t rNum);
+    inline void f_inc16(const uint8_t r16Num);
+    inline void f_dec16(const uint8_t r16Num);
     memory m_memory;
     bool m_failedHalt;
     inline void f_ldRR(const uint8_t src, const uint8_t dest);
