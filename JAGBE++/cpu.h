@@ -31,6 +31,7 @@ private:
     inline void f_dec8(const uint8_t rNum);
     inline void f_inc16(const uint8_t r16Num);
     inline void f_dec16(const uint8_t r16Num);
+    inline void f_cmp(const uint8_t val);
     memory m_memory;
     bool m_failedHalt;
     inline void f_ldRR(const uint8_t src, const uint8_t dest);

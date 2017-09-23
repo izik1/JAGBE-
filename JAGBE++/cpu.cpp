@@ -102,6 +102,10 @@ void cpu::f_runIstr() {
         case 0x18: f_jr8(true); break;
         case 0x20: f_jr8(!f_condJump(true));  break;
         case 0x28: f_jr8(f_condJump(true));   break;
+        case 0x2F: // CPL
+            m_memory.a = ~m_memory.a;
+            m_memory.f = (m_memory.f & (flags::getFlags(true, false, false, true)) | flags::getFlags(false, true, true, false));
+            break;
         case 0x30: f_jr8(!f_condJump(false)); break;
         case 0x38: f_jr8(f_condJump(false));  break;
         default: throw unimplementedInstructionException(op);
@@ -113,20 +117,20 @@ void cpu::f_runIstr() {
         break;
     }
     case 0x80: {
+        uint8_t val = f_getarrithval(op & 0b111);
         switch ((op >> 3) & 0b111) {
         case 0x00: { // ADD A,R
-            uint8_t val = f_getarrithval(op & 0b111);
             uint8_t sum = val + m_memory.a;
             m_memory.f = flags::f_getZF8(sum) | flags::f_getHC8(m_memory.a, val) | flags::f_getCF8(m_memory.a, sum);
             break;
         }
         case 0x05: { // XOR,A,R
-            m_memory.a = f_getarrithval(op & 0b111) ^ m_memory.a;
+            m_memory.a = val ^ m_memory.a;
             m_memory.f = flags::f_getZF8(m_memory.a);
             break;
         }
-        default:
-            throw unimplementedInstructionException(op);
+        case 0x07: f_cmp(val); break;
+        default: throw unimplementedInstructionException(op);
         }
 
         break;
@@ -149,6 +153,7 @@ void cpu::f_runIstr() {
         case 0xE1: f_pop(m_memory.h, m_memory.l); break;
         case 0xE2: f_writecycle(0xFF00 | m_memory.c, m_memory.a); break;
         case 0xE5: f_push(m_memory.h, m_memory.l); break;
+        case 0xEA: f_writecycle(f_readcycleU8() | (f_readcycleU8() << 8), m_memory.a); // LD (a16),A
         case 0xF0: m_memory.a = f_readcycle(0xFF00 | f_readcycleU8()); break;
         case 0xF1: f_pop(m_memory.a, m_memory.f); m_memory.f &= 0xF0; break;
         case 0xF2: m_memory.a = f_readcycle(0xFF00 | m_memory.c); break;
@@ -302,6 +307,11 @@ inline void cpu::f_dec16(const uint8_t r16Num) {
     default:
         m_memory.sp--; return;
     }
+}
+
+inline void cpu::f_cmp(const uint8_t val) {
+    m_memory.f = flags::f_getZF8(m_memory.a - val) | flags::NEGATIVEVEBIT |
+        flags::f_getHC8(m_memory.a, val) | (m_memory.a - val < 0 ? flags::CARRYBIT : 0);
 }
 
 inline void cpu::f_ldRR(const uint8_t dest, const uint8_t src) {
