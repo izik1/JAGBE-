@@ -13,6 +13,7 @@ private:
     inline void f_ldu16r(const uint8_t r16Num);
     inline uint8_t f_readcycleU8();
     bool m_ime;
+    bool m_nextIME;
     enum state { okay, halt, stop, hung };
     void f_updateDevices();
     void f_updateDevices(const cycle_t tcycles);

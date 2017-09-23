@@ -241,6 +241,7 @@ cpu::cpu(uint8_t * const p_bootRom) : m_memory(p_bootRom) {
     m_state = cpu::okay;
     m_syncCycle = 0;
     m_ime = false;
+    m_nextIME = false;
     m_failedHalt = false;
 }
 
@@ -256,8 +257,28 @@ void cpu::f_updateDevices(const cycle_t tcycles) {
 
 void cpu::f_handleInterrupts() {
     if (!m_ime || !(m_memory.ie & m_memory.m_if & 0x1F)) {
+        m_ime = m_nextIME;
         return;
     }
 
-    throw NotImplementedException("cpu::f_handleInterrupts");
+    m_ime = false;
+    m_nextIME = false;
+
+    f_updateDevices(MCYCLE + 2);
+    f_writecyclePush(m_memory.pc >> 8);
+    uint16_t newPc = 0;
+    uint8_t b = m_memory.ie & m_memory.m_if & 0x1F;
+    for (uint8_t i = 0; i < 5; i++)
+    {
+        if (((b >> i) & 0x1) == 1)
+        {
+            newPc = uint16_t(((i * 8) + 0x40));
+            m_memory.m_if &= ~(1 << i);
+            break;
+        }
+    }
+
+    f_writecyclePush(m_memory.pc & 0xFF);
+    m_memory.pc = newPc;
+    f_updateDevices(2);
 }
