@@ -21,6 +21,7 @@ private:
     void f_runIstr();
     void f_runCbInstr();
     inline void f_push(const uint8_t rHigh, const uint8_t rLow);
+    inline void f_pop(uint8_t & rHigh, uint8_t & rLow);
     inline void f_cbWrite(const uint8_t src, const uint8_t val);
     inline void f_jr8(bool jump);
     inline bool f_condJump(bool zero);
@@ -30,6 +31,7 @@ private:
     bool m_failedHalt;
     inline void f_ldRR(const uint8_t src, const uint8_t dest);
     uint8_t f_readcycle(const uint16_t address);
+    uint8_t f_readcyclePop();
     inline void f_call(bool call);
     void f_writecycle(const uint16_t address, const uint8_t value);
     inline uint8_t f_readcycleHL();
