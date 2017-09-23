@@ -77,6 +77,9 @@ void cpu::f_runIstr() {
         case 0x04: case 0x0C: case 0x14: case 0x1C: case 0x24: case 0x2C: case 0x34: case 0x3C:
             f_inc8(op >> 3); break;
 
+        case 0x05: case 0x0D: case 0x15: case 0x1D:case 0x25: case 0x2D:case 0x35: case 0x3D:
+            f_dec8(op >> 3); break;
+
         case 0x06: case 0x0E: case 0x16: case 0x1E: case 0x26: case 0x2E: case 0x36: case 0x3E:
             f_ldrD8(op >> 3);  break;
 
@@ -237,6 +240,12 @@ inline void cpu::f_inc8(uint8_t rNum) {
     uint8_t v = rNum == 0b110 ? f_readcycleHL() : m_memory.getReg8(rNum);
     f_cbWrite(rNum, v + 1);
     m_memory.f = flags::f_getZF8(v + 1) | flags::f_getHC8(v, 1) | (m_memory.f & flags::CARRYBIT);
+}
+
+inline void cpu::f_dec8(const uint8_t rNum) {
+    uint8_t v = rNum == 0b110 ? f_readcycleHL() : m_memory.getReg8(rNum);
+    f_cbWrite(rNum, v - 1);
+    m_memory.f = flags::f_getZF8(v - 1) | flags::NEGATIVEVEBIT | flags::f_getHCN8(v, 1) | (m_memory.f & flags::CARRYBIT);
 }
 
 inline void cpu::f_ldRR(const uint8_t dest, const uint8_t src) {

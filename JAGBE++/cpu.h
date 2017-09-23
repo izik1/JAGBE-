@@ -27,6 +27,7 @@ private:
     inline bool f_condJump(bool zero);
     inline void f_ldrD8(uint8_t rNum);
     inline void f_inc8(uint8_t rNum);
+    inline void f_dec8(const uint8_t rNum);
     memory m_memory;
     bool m_failedHalt;
     inline void f_ldRR(const uint8_t src, const uint8_t dest);
