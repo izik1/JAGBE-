@@ -81,6 +81,13 @@ void cpu::f_runIstr() {
         case 0x0A: case 0x1A: case 0x2A: case 0x3A: // LD,A,(r16)
             f_ldaR16(op >> 4); break;
 
+        case 0x17: { // RLA
+            bool b = m_memory.a & 0x80;
+            m_memory.a <<= 1;
+            m_memory.a |= (m_memory.f & flags::CARRYBIT ? 1 : 0);
+            m_memory.f = b ? flags::CARRYBIT : 0;
+            break;
+        }
         case 0x18: f_jr8(true); break;
         case 0x20: f_jr8(!f_condJump(true));  break;
         case 0x28: f_jr8(f_condJump(true));   break;
