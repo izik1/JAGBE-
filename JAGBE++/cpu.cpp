@@ -136,12 +136,14 @@ void cpu::f_runIstr() {
         case 0xC1: f_pop(m_memory.b, m_memory.c); break;
         case 0xC4: f_call(!f_condJump(true)); break;
         case 0xC5: f_push(m_memory.b, m_memory.c); break;
+        case 0xC9: f_ret(false); break;
         case 0xCB: f_runCbInstr(); break;
         case 0xCC: f_call(f_condJump(true)); break;
         case 0xCD: f_call(true); break;
         case 0xD1: f_pop(m_memory.d, m_memory.e); break;
         case 0xD4: f_call(!f_condJump(false)); break;
         case 0xD5: f_push(m_memory.d, m_memory.e); break;
+        case 0xD9: f_ret(true); break;
         case 0xDC: f_call(f_condJump(false)); break;
         case 0xE0: f_writecycle(0xFF00 | f_readcycleU8(), m_memory.a); break;
         case 0xE1: f_pop(m_memory.h, m_memory.l); break;
@@ -151,6 +153,7 @@ void cpu::f_runIstr() {
         case 0xF1: f_pop(m_memory.a, m_memory.f); m_memory.f &= 0xF0; break;
         case 0xF2: m_memory.a = f_readcycle(0xFF00 | m_memory.c); break;
         case 0xF5: f_push(m_memory.a, m_memory.f); break;
+        case 0xFE: f_cmp(f_readcycleU8()); break;
         default: throw unimplementedInstructionException(op);
         }
 
@@ -234,6 +237,14 @@ inline void cpu::f_jr8(const bool jump) {
 
     if (!jump) m_memory.pc++;
     else m_memory.pc += int8_t(f_readcycleU8());
+}
+
+inline void cpu::f_ret(const bool ei) {
+    m_memory.pc = f_readcyclePop() | (f_readcyclePop() << 8);
+    if (ei) {
+        m_ime = true;
+        m_nextIME = true;
+    }
 }
 
 inline bool cpu::f_condJump(const bool zero) {

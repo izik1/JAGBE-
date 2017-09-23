@@ -24,6 +24,7 @@ private:
     inline void f_pop(uint8_t & rHigh, uint8_t & rLow);
     inline void f_cbWrite(const uint8_t src, const uint8_t val);
     inline void f_jr8(const bool jump);
+    inline void f_ret(const bool ei);
     inline bool f_condJump(const bool zero);
     inline void f_ldrD8(const uint8_t rNum);
     inline void f_inc8(const uint8_t rNum);
