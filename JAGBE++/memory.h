@@ -35,8 +35,10 @@ private:
     const size_t ROMBANKSIZE = 0x4000;
     size_t rombank;
     uint8_t* rom;
+    uint8_t* oam;
     uint8_t* vram;
     uint8_t* wram;
+    uint8_t* hram;
     uint8_t* m_bootRom;
     uint8_t m_mbcMode;
     void clearRom(const size_t size) noexcept;

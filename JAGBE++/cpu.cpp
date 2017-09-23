@@ -9,7 +9,9 @@ inline uint8_t cpu::f_getarrithval(const uint8_t src) {
 }
 
 inline void cpu::f_ldu16r(const uint8_t r16Num) {
-    m_memory.setR16(r16Num, f_readcycleU8(), f_readcycleU8());
+    uint8_t l = f_readcycleU8();
+    uint8_t h = f_readcycleU8();
+    m_memory.setR16(r16Num, l, h);
 }
 
 inline void cpu::f_ldaR16(const uint8_t r16Num) {
@@ -204,8 +206,8 @@ void cpu::f_runCbInstr() {
 
 inline void cpu::f_push(const uint8_t rHigh, const  uint8_t rLow) {
     f_updateDevices(MCYCLE);
-    f_writecyclePush(rLow);
     f_writecyclePush(rHigh);
+    f_writecyclePush(rLow);
 }
 
 inline void cpu::f_pop(uint8_t & rHigh, uint8_t & rLow) {
@@ -225,25 +227,24 @@ inline void cpu::f_jr8(bool jump) {
     else m_memory.pc += int8_t(f_readcycleU8());
 }
 
-inline bool cpu::f_condJump(bool zero)
-{
+inline bool cpu::f_condJump(bool zero) {
     return m_memory.f & (zero ? flags::ZEROBIT : flags::CARRYBIT);
 }
 
-inline void cpu::f_ldrD8(uint8_t rNum) { return f_cbWrite(rNum, f_readcycleU8()); }
+inline void cpu::f_ldrD8(uint8_t rNum) { f_cbWrite(rNum, f_readcycleU8()); }
 
 inline void cpu::f_inc8(uint8_t rNum) {
-    f_cbWrite(rNum, (rNum == 0b110 ? f_readcycleHL() : m_memory.getReg8(rNum) + 1));
+    uint8_t v = rNum == 0b110 ? f_readcycleHL() : m_memory.getReg8(rNum);
+    f_cbWrite(rNum, v + 1);
+    m_memory.f = flags::f_getZF8(v + 1) | flags::f_getHC8(v, 1) | (m_memory.f & flags::CARRYBIT);
 }
 
 inline void cpu::f_ldRR(const uint8_t dest, const uint8_t src) {
     if (dest == 0b110 || src == 0b110) {
         assert(src != dest);
 
-        if (src == 0b110)
-            m_memory.setReg8(dest, f_readcycle(m_memory.hl()));
-        else
-            this->f_writecycle(m_memory.hl(), (m_memory.getReg8(src)));
+        if (src == 0b110) m_memory.setReg8(dest, f_readcycle(m_memory.hl()));
+        else this->f_writecycleHL(m_memory.getReg8(src));
         return;
     }
 
@@ -261,8 +262,7 @@ uint8_t cpu::f_readcyclePop() {
 
 inline void cpu::f_call(bool call) {
     uint16_t addr = f_readcycleU8() | (f_readcycleU8() << 8);
-    if (!call)
-    {
+    if (!call) {
         return;
     }
 
@@ -284,7 +284,7 @@ inline void cpu::f_writecycleHL(const uint8_t value) {
     f_writecycle(m_memory.hl(), value);
 }
 
-inline void cpu::f_writecyclePush(const uint8_t value) { f_writecycle(m_memory.sp--, value); }
+inline void cpu::f_writecyclePush(const uint8_t value) { f_writecycle(--m_memory.sp, value); }
 
 void cpu::f_tick(const cycle_t tcycles) {
     m_syncCycle += tcycles;
@@ -321,8 +321,7 @@ void cpu::f_updateDevices() {
 }
 
 void cpu::f_updateDevices(const cycle_t tcycles) {
-    for (cycle_t i = 0; i < tcycles; i++)
-        f_updateDevices();
+    for (cycle_t i = 0; i < tcycles; i++) f_updateDevices();
 }
 
 void cpu::f_handleInterrupts() {

@@ -17,6 +17,10 @@ namespace flags {
         return (((a & 0x0F) + (b & 0x0F)) & 0x10) == 0x10 ? flags::HALFBIT : 0;
     }
 
+    constexpr uint8_t f_getHCN8(const uint8_t a, const uint8_t b) {
+        return (a & 0xF) - (b & 0xF) < 0 ? flags::HALFBIT : 0;
+    }
+
     constexpr uint8_t f_getZF8(const uint8_t val) {
         return val == 0 ? ZEROBIT : 0;
     }

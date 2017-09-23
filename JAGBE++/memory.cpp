@@ -30,8 +30,10 @@ memory::memory(uint8_t* const p_bootRom) {
     const size_t WRAMSIZE = 0x2000;
     const size_t VRAMSIZE = 0x2000;
     this->rom = new uint8_t[ROMSIZE];
+    this->oam = new uint8_t[0xA0];
     this->wram = new uint8_t[WRAMSIZE];
     this->vram = new uint8_t[VRAMSIZE];
+    this->hram = new uint8_t[0x7F];
     this->m_bootRom = p_bootRom;
     this->rombank = 1;
     this->ie = 0;
@@ -53,19 +55,26 @@ memory::memory(uint8_t* const p_bootRom) {
 }
 
 memory::~memory() {
-    if (this->rom) delete[](this->rom);
-    if (this->wram) delete[](this->wram);
-    if (this->vram) delete[](this->vram);
-    if (this->m_bootRom) delete[](this->m_bootRom);
+    assert(this->rom, "Something prematurely deleted the rom, is the destructor being called twice???");
+    assert(this->wram, "Something prematurely deleted wram, is the destructor being called twice???");
+    assert(this->vram, "Something prematurely deleted vram, is the destructor being called twice???");
+    assert(this->hram, "Something prematurely deleted hram, is the destructor being called twice???");
+    assert(this->oam, "Something prematurely deleted oam, is the destructor being called twice???");
+    delete[](this->rom);
+    delete[](this->wram);
+    delete[](this->vram);
+    delete[](this->hram);
+    delete[](this->oam);
+    if (this->m_bootRom) delete[](this->m_bootRom); // this actually *can* be deleted before here.
     rom = nullptr;
     wram = nullptr;
     vram = nullptr;
+    oam = nullptr;
     m_bootRom = nullptr;
 }
 
 uint8_t memory::getReg8(const uint8_t number) const {
-    switch (number)
-    {
+    switch (number) {
     case 0: return b;
     case 1: return c;
     case 2: return d;
@@ -121,11 +130,11 @@ uint8_t memory::getMappedMemory(const uint16_t addressIn, const bool OAMDMARead)
         else return 0xFF;
     }
     if (address < 0xE000) return this->wram[address - 0xC000]; // WRAM
-    if (address < 0xFE00) return this->wram[address - 0xE000]; // VRAM mirror
-    if (address < 0xFEA0) UNIMPLEMENTEDREAD("OAM", address - 0xFE00); // OAM
-    if (address < 0xFF00) return  0x00; // Unused
+    if (address < 0xFE00) return this->wram[address - 0xE000]; // WRAM mirror
+    if (address < 0xFEA0) return oam[address - 0xFE00]; // OAM
+    if (address < 0xFF00) return wram[address - 0xFEA0];
     if (address < 0xFF80) UNIMPLEMENTEDREAD("IOREG", address - 0xFF00); // I/O REG
-    if (address < 0xFFFF) UNIMPLEMENTEDREAD("HRAM", address - 0xFF80); // HRAM
+    if (address < 0xFFFF) return hram[address - 0xFF80]; // HRAM
     return this->ie; // IE
 }
 
@@ -149,12 +158,12 @@ void memory::setR16(const uint8_t number, const uint8_t lowByte, const uint8_t h
         b = highByte;
         return;
     case 1:
-        d = lowByte;
-        e = highByte;
+        e = lowByte;
+        d = highByte;
         return;
     case 2:
-        h = lowByte;
-        l = highByte;
+        l = lowByte;
+        h = highByte;
         return;
     case 3:
         sp = lowByte;
@@ -177,13 +186,14 @@ uint8_t memory::getRomMemory(const size_t bank, const  uint16_t address) const {
 
 void memory::setMappedMemory_common(const uint16_t address, const uint8_t value) {
     assert(address >= 0x8000);
+
     if (address < 0xA000) this->vram[address - 0x8000] = value; // VRAM
     else if (address < 0xC000) { if (this->sramEnabled) UNIMPLEMENTEDWRITE("SRAM", address - 0xA000); } // SRAM
     else if (address < 0xE000) this->wram[address - 0xC000] = value; // WRAM
     else if (address < 0xFE00) this->wram[address - 0xE000] = value; // WRAM mirror
-    else if (address < 0xFEA0) UNIMPLEMENTEDWRITE("OAM", address - 0xFE00); // OAM
-    else if (address < 0xFF00) return; // Unused
-    else if (address < 0xFF80) UNIMPLEMENTEDWRITE("IOREG", address - 0xFF00); // I/O REG
-    else if (address < 0xFFFF) UNIMPLEMENTEDWRITE("HRAM", address - 0xFF80); // HRAM
+    else if (address < 0xFEA0) { oam[address - 0xFE00]; } // OAM
+    else if (address < 0xFF00) wram[address - 0xFEA0] = value; // Unused
+    else if (address < 0xFF80) { UNIMPLEMENTEDWRITE("IOREG", address - 0xFF00); } // I/O REG
+    else if (address < 0xFFFF) hram[address - 0xFF80] = value; // HRAM
     else ie = value; // IE
 }
