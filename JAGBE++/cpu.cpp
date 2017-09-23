@@ -58,8 +58,9 @@ void cpu::f_runIstr() {
     f_updateDevices(2);
     f_handleInterrupts();
     f_updateDevices(1);
-    uint8_t op = m_memory.getMappedMemory(m_memory.pc++);
-    std::cerr << m_memory.pc << " " << int(op) << std::endl;
+    uint8_t op = m_memory.getMappedMemory(m_memory.pc);
+    if (!m_failedHalt) m_memory.pc++;
+    else m_failedHalt = false;
     f_updateDevices(1);
 
     switch (op & 0xC0) {
@@ -191,7 +192,6 @@ uint8_t cpu::f_readcycle(const uint16_t address) {
 
 inline void cpu::f_call(bool call) {
     uint16_t addr = f_readcycleU8() | (f_readcycleU8() << 8);
-    std::cerr << "call addr: " << addr << std::endl;
     if (!call)
     {
         return;
@@ -225,13 +225,14 @@ void cpu::f_tick(const cycle_t tcycles) {
             f_runIstr();
             break;
         case cpu::halt:
-            throw NotImplementedException("cpu::f_tick::halt");
+            f_updateDevices(MCYCLE);
+            if (m_memory.m_if & m_memory.ie) m_state = cpu::okay;
             break;
         case cpu::stop:
             throw NotImplementedException("cpu::f_tick::stop");
             break;
         case cpu::hung:
-            throw NotImplementedException("cpu::f_tick::hung");
+            f_updateDevices(m_syncCycle);
             break;
         }
     }
