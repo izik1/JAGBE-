@@ -1,9 +1,13 @@
 #pragma once
 #include <cstdint>
+
+class lcd;
 class memory
 {
 public:
     void setReg8(const uint8_t number, const uint8_t value);
+    void bindlcd(lcd &p_lcd);
+    void unbindlcd();
     uint8_t getReg8(const uint8_t number) const;
     uint8_t b;
     uint8_t c;
@@ -29,6 +33,14 @@ public:
     uint8_t m_if;
     void setR16(const uint8_t number, const uint8_t lowByte, const uint8_t highByte);
 private:
+
+    uint8_t getIoReg(const uint8_t num) const;
+    void setIoReg(const uint8_t num, const uint8_t value);
+
+    /// <summary>
+    /// The bound lcd, this isn't owned by the memory.
+    /// </summary>
+    lcd* m_lcd;
     size_t romLength;
     bool sramEnabled;
     uint8_t getRomMemory(const size_t bank, const  uint16_t address) const;

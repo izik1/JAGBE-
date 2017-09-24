@@ -5,6 +5,7 @@
 #include <cassert>
 #include <iomanip>
 #include "jagbe++exceptions.h"
+#include "lcd.h"
 #define UNIMPLEMENTEDMEMORYOPERATION(operation, location, offset) do { \
     std::cerr << __FUNCTION__ << "::unimplemented::"<< (operation) << "::" << (location) << "::" << \
     std::setfill('0') << std::setw(4) << std::hex <<  (offset) << std::endl; \
@@ -55,11 +56,11 @@ memory::memory(uint8_t* const p_bootRom) {
 }
 
 memory::~memory() {
-    assert(this->rom, "Something prematurely deleted the rom, is the destructor being called twice???");
-    assert(this->wram, "Something prematurely deleted wram, is the destructor being called twice???");
-    assert(this->vram, "Something prematurely deleted vram, is the destructor being called twice???");
-    assert(this->hram, "Something prematurely deleted hram, is the destructor being called twice???");
-    assert(this->oam, "Something prematurely deleted oam, is the destructor being called twice???");
+    assert(this->rom);
+    assert(this->wram);
+    assert(this->vram);
+    assert(this->hram);
+    assert(this->oam);
     delete[](this->rom);
     delete[](this->wram);
     delete[](this->vram);
@@ -106,6 +107,16 @@ void memory::setReg8(const uint8_t number, const uint8_t value) {
     }
 }
 
+void memory::unbindlcd() {
+    m_lcd->unbind();
+    m_lcd = nullptr;
+}
+
+void memory::bindlcd(lcd & p_lcd) {
+    m_lcd = &p_lcd;
+    m_lcd->bind(vram, oam);
+}
+
 void memory::clearRom(const size_t size) noexcept {
     for (size_t i = 0; i < size; i++) this->rom[i] = 0xFF;
 }
@@ -133,7 +144,7 @@ uint8_t memory::getMappedMemory(const uint16_t addressIn, const bool OAMDMARead)
     if (address < 0xFE00) return this->wram[address - 0xE000]; // WRAM mirror
     if (address < 0xFEA0) return oam[address - 0xFE00]; // OAM
     if (address < 0xFF00) return wram[address - 0xFEA0];
-    if (address < 0xFF80) UNIMPLEMENTEDREAD("IOREG", address - 0xFF00); // I/O REG
+    if (address < 0xFF80) return getIoReg(address - 0xFF00); // I/O REG
     if (address < 0xFFFF) return hram[address - 0xFF80]; // HRAM
     return this->ie; // IE
 }
@@ -172,6 +183,25 @@ void memory::setR16(const uint8_t number, const uint8_t lowByte, const uint8_t h
     }
 }
 
+uint8_t memory::getIoReg(const uint8_t num) const {
+    if (num == 0x00) UNIMPLEMENTEDREAD("JOYPAD", 0);
+    if (num < 3) UNIMPLEMENTEDREAD("SERIAL", num - 1);
+    if (num < 0xF) UNIMPLEMENTEDREAD("TIMER", num - 3);
+    if (num == 0xF) return m_if | 0xE0;
+    if (num < 0x40) UNIMPLEMENTEDREAD("APU", num - 0x10);
+    if (num < 0x50) { return m_lcd ? m_lcd->getReg(num - 0x40) : 0xFF; }
+    return 0xFF;
+}
+
+void memory::setIoReg(const uint8_t num, const uint8_t value) {
+    if (num == 0x00) UNIMPLEMENTEDWRITE("JOYPAD", 0);
+    if (num < 3) UNIMPLEMENTEDWRITE("SERIAL", num - 1);
+    if (num < 0xF) UNIMPLEMENTEDWRITE("TIMER", num - 3);
+    if (num == 0xF) m_if = value & 0x1F;
+    if (num < 0x40) UNIMPLEMENTEDWRITE("APU", num - 0x10);
+    if (num < 0x50 && m_lcd) m_lcd->setReg(num-0x40, value);
+}
+
 uint8_t memory::getRomMemory(const size_t bank, const  uint16_t address) const {
     if (m_bootRom && address < 0x100 && bank == 0)
     {
@@ -193,7 +223,7 @@ void memory::setMappedMemory_common(const uint16_t address, const uint8_t value)
     else if (address < 0xFE00) this->wram[address - 0xE000] = value; // WRAM mirror
     else if (address < 0xFEA0) { oam[address - 0xFE00]; } // OAM
     else if (address < 0xFF00) wram[address - 0xFEA0] = value; // Unused
-    else if (address < 0xFF80) { UNIMPLEMENTEDWRITE("IOREG", address - 0xFF00); } // I/O REG
+    else if (address < 0xFF80) setIoReg(address - 0xFF00, value); // I/O REG
     else if (address < 0xFFFF) hram[address - 0xFF80] = value; // HRAM
     else ie = value; // IE
 }

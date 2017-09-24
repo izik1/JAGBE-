@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include "jagbe++exceptions.h"
+#include "cycling.h"
 int main()
 {
     assert(flags::f_getCF8(0xFF, 0x01) == flags::CARRYBIT);
@@ -33,7 +34,7 @@ int main()
     {
         while (true)
         {
-            l_cpu.f_tick(MCYCLE * 64);
+            l_cpu.f_tick(cycle::MCYCLE * 64);
         }
     }
     catch (const unimplementedInstructionException& e)

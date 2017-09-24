@@ -1,9 +1,7 @@
 #pragma once
 #include "memory.h"
-
-typedef long long cycle_t;
-const cycle_t MCYCLE = 4;
-const cycle_t TCYCLE = 1;
+#include "lcd.h"
+#include "cycling.h"
 class cpu {
 public:
     void f_tick(const cycle_t tcycles);
@@ -12,6 +10,7 @@ public:
 private:
     inline void f_ldu16r(const uint8_t r16Num);
     inline uint8_t f_readcycleU8();
+    lcd m_lcd;
     bool m_ime;
     bool m_nextIME;
     enum state { okay, halt, stop, hung };

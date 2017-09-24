@@ -102,11 +102,12 @@ void cpu::f_runIstr() {
         case 0x18: f_jr8(true); break;
         case 0x20: f_jr8(!f_condJump(true));  break;
         case 0x28: f_jr8(f_condJump(true));   break;
-        case 0x2F: // CPL
+        case 0x2F: {// CPL
             m_memory.a = ~m_memory.a;
             m_memory.f = (m_memory.f & (flags::getFlags(true, false, false, true)) |
                 flags::getFlags(false, true, true, false));
             break;
+        }
         case 0x30: f_jr8(!f_condJump(false)); break;
         case 0x38: f_jr8(f_condJump(false));  break;
         default: throw unimplementedInstructionException(op);
@@ -225,7 +226,7 @@ void cpu::f_runCbInstr() {
 }
 
 inline void cpu::f_push(const uint8_t rHigh, const  uint8_t rLow) {
-    f_updateDevices(MCYCLE);
+    f_updateDevices(cycle::MCYCLE);
     f_writecyclePush(rHigh);
     f_writecyclePush(rLow);
 }
@@ -241,7 +242,7 @@ inline void cpu::f_cbWrite(const uint8_t src, const uint8_t val) {
 }
 
 inline void cpu::f_jr8(const bool jump) {
-    f_updateDevices(MCYCLE);
+    f_updateDevices(cycle::MCYCLE);
 
     if (!jump) m_memory.pc++;
     else m_memory.pc += int8_t(f_readcycleU8());
@@ -274,7 +275,7 @@ inline void cpu::f_dec8(const uint8_t rNum) {
 }
 
 inline void cpu::f_inc16(const uint8_t r16Num) {
-    f_updateDevices(MCYCLE);
+    f_updateDevices(cycle::MCYCLE);
     switch (r16Num) {
     case 0:
         if (m_memory.c == 0xFF) m_memory.b++;
@@ -293,7 +294,7 @@ inline void cpu::f_inc16(const uint8_t r16Num) {
     }
 }
 inline void cpu::f_dec16(const uint8_t r16Num) {
-    f_updateDevices(MCYCLE);
+    f_updateDevices(cycle::MCYCLE);
     switch (r16Num) {
     case 0:
         if (m_memory.c == 0) m_memory.b--;
@@ -322,9 +323,9 @@ inline void cpu::f_sbc(const uint8_t val)
     // Copied from https://github.com/eightlittlebits/elbgb/blob/dffc2800/elbgb_core/CPU/LR35902.cs#L1084
     uint8_t cIn = (m_memory.f & flags::CARRYBIT) ? 1 : 0;
     int16_t res = m_memory.a - val - cIn;
-    m_memory.f = flags::f_getZF8(res) | flags::NEGATIVEVEBIT |
+    m_memory.f = flags::f_getZF8(uint8_t(res)) | flags::NEGATIVEVEBIT |
         ((m_memory.a & 0xF) - (val & 0xF) - cIn < 0 ? flags::HALFBIT : 0) | (res < 0 ? flags::CARRYBIT : 0);
-    m_memory.a = res;
+    m_memory.a = uint8_t(res);
 }
 
 inline void cpu::f_ldRR(const uint8_t dest, const uint8_t src) {
@@ -354,7 +355,7 @@ inline void cpu::f_call(bool call) {
         return;
     }
 
-    f_updateDevices(MCYCLE);
+    f_updateDevices(cycle::MCYCLE);
     f_writecyclePush(m_memory.pc >> 8);
     f_writecyclePush(m_memory.pc & 0xFF);
     m_memory.pc = addr;
@@ -380,7 +381,7 @@ void cpu::f_tick(const cycle_t tcycles) {
             f_runIstr();
             break;
         case cpu::halt:
-            f_updateDevices(MCYCLE);
+            f_updateDevices(cycle::MCYCLE);
             if (m_memory.m_if & m_memory.ie) m_state = cpu::okay;
             break;
         case cpu::stop:
@@ -394,6 +395,7 @@ void cpu::f_tick(const cycle_t tcycles) {
 }
 
 cpu::cpu(uint8_t * const p_bootRom) : m_memory(p_bootRom) {
+    m_memory.bindlcd(m_lcd);
     m_state = cpu::okay;
     m_syncCycle = 0;
     m_ime = false;
@@ -403,6 +405,7 @@ cpu::cpu(uint8_t * const p_bootRom) : m_memory(p_bootRom) {
 
 void cpu::f_updateDevices() {
     m_syncCycle--;
+    m_lcd.update(m_memory.m_if);
     return; // Nothing to update yet.
 }
 
@@ -419,7 +422,7 @@ void cpu::f_handleInterrupts() {
     m_ime = false;
     m_nextIME = false;
 
-    f_updateDevices(MCYCLE + 2);
+    f_updateDevices(cycle::MCYCLE + 2);
     f_writecyclePush(m_memory.pc >> 8);
     uint16_t newPc = 0;
     uint8_t b = m_memory.ie & m_memory.m_if & 0x1F;

@@ -144,16 +144,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="cpu.h" />
+    <ClInclude Include="cycling.h" />
     <ClInclude Include="flags.h" />
     <ClInclude Include="jagbe++exceptions.h" />
+    <ClInclude Include="lcd.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="NotImplementedException.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="unimplementedInstructionException.h" />
+    <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="JAGBE++.cpp" />
+    <ClCompile Include="lcd.cpp" />
     <ClCompile Include="lcdmemory.cpp" />
     <ClCompile Include="memory.cpp" />
     <ClCompile Include="NotImplementedException.cpp" />
